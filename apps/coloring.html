@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Color Planets - Star Kids</title>
+<meta name="theme-color" content="#0b1030">
+<link rel="manifest" href="../manifest.json">
+<link rel="icon" type="image/png" href="../assets/icons/icon-192.png">
+<link rel="apple-touch-icon" href="../assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0b1030;--ink:#fff;--soft:#c9cdf5;--yellow:#ffd23f;--pink:#ff6b9d;--cyan:#4dd6ff;--green:#7ae582;--purple:#a78bfa;
+        --panel:rgba(20,24,70,.96);--line:#23214a;
+        --font:"Baloo 2","Chalkboard SE","Comic Sans MS","Trebuchet MS",system-ui,sans-serif;--vh:100vh}
+  @supports (height:100dvh){:root{--vh:100dvh}}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font);overscroll-behavior:none}
+  body{background:radial-gradient(120% 70% at 50% 0%,#2a2f86 0%,var(--bg) 62%)}
+  .app{height:var(--vh);display:grid;grid-template-rows:auto auto 1fr auto;gap:8px;
+       padding:calc(env(safe-area-inset-top) + 10px) 12px calc(env(safe-area-inset-bottom) + 10px)}
+  .top{display:flex;align-items:center;gap:8px}
+  .title{flex:1;font-weight:800;font-size:clamp(20px,5.5vw,28px);text-align:center}
+  .btn{width:48px;height:48px;flex:none;border-radius:50%;border:2px solid rgba(255,255,255,.18);background:rgba(20,24,70,.78);color:#fff;
+       font-size:22px;display:grid;place-items:center;text-decoration:none;cursor:pointer}
+  .btn:active{transform:scale(.92)}.btn:disabled{opacity:.35}
+  .pics{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none}
+  .pics::-webkit-scrollbar{display:none}
+  .pic{flex:none;display:flex;align-items:center;gap:6px;padding:6px 14px 6px 8px;border-radius:999px;border:2px solid rgba(255,255,255,.15);
+       background:rgba(255,255,255,.07);color:#fff;font:700 16px var(--font);cursor:pointer}
+  .pic b{font-size:22px}
+  .pic.on{background:var(--yellow);color:#1b1b3a;border-color:var(--yellow)}
+  .board{position:relative;min-height:0;min-width:0;display:grid;place-items:center;container-type:size}
+  .paper{position:relative;width:min(100cqw,100cqh);height:min(100cqw,100cqh);border-radius:26px;background:#fff;
+         box-shadow:0 12px 30px rgba(0,0,0,.45);overflow:hidden}
+  .paper svg{display:block;width:100%;height:100%;touch-action:manipulation}
+
+  /* bottom bar: reference picture + tip */
+  .guide{display:flex;align-items:center;gap:12px;padding:8px 12px 8px 8px;border-radius:22px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.12)}
+  .ref{flex:none;width:86px;height:86px;border-radius:16px;background:#fff;overflow:hidden;border:3px solid var(--yellow);padding:0;cursor:zoom-in;
+       box-shadow:0 6px 14px rgba(0,0,0,.35);position:relative}
+  .ref svg{display:block;width:100%;height:100%;pointer-events:none}
+  .ref::after{content:"🔍";position:absolute;right:2px;bottom:0;font-size:16px}
+  .guide .txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .guide b{font-size:clamp(17px,4.6vw,21px);line-height:1.1}
+  .guide span{color:var(--soft);font-size:14px;line-height:1.2}
+  .progress{margin-top:4px;height:8px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden;width:min(220px,46vw)}
+  .progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:4px;transition:width .3s}
+
+  @media (orientation:landscape) and (max-height:600px){
+    .app{grid-template-columns:1fr auto;grid-template-rows:auto auto 1fr;column-gap:12px}
+    .top{grid-column:1/-1}.pics{grid-column:1/-1}.board{grid-column:1;grid-row:3}
+    .guide{grid-column:2;grid-row:3;flex-direction:column;align-self:center;max-width:190px;text-align:center}
+    .ref{width:130px;height:130px}.guide .txt{align-items:center}
+  }
+
+  /* drawing */
+  .sec{stroke:var(--line);stroke-width:4;stroke-linejoin:round;cursor:pointer;transition:fill .18s}
+  .ol{fill:none;stroke:var(--line);stroke-width:5;stroke-linejoin:round;pointer-events:none}
+  .ink{fill:var(--line);pointer-events:none}
+  .paint,.edge{pointer-events:none}
+  .edge{fill:none;stroke:var(--line);stroke-width:4;stroke-linejoin:round}
+  .paint path{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:.93}
+  .paper.brush svg{cursor:crosshair}
+  .paper.brush svg{touch-action:none}
+  #chip{position:absolute;left:50%;top:8px;transform:translateX(-50%);white-space:nowrap;z-index:2;display:none;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:999px;
+        background:rgba(20,24,70,.9);color:#fff;font:700 14px var(--font);border:2px solid rgba(255,255,255,.2);cursor:pointer}
+  #chip.show{display:flex}
+  #chip i{width:26px;height:26px;border-radius:50%;border:3px solid #fff;display:block}
+  .ripple{pointer-events:none;animation:rip .45s ease-out forwards}
+  @keyframes rip{from{r:4;opacity:.8}to{r:46;opacity:0}}
+
+  /* color pop-up */
+  #pop{position:fixed;z-index:30;width:min(300px,calc(100vw - 24px));padding:12px;border-radius:24px;background:var(--panel);
+       border:2px solid rgba(255,255,255,.18);box-shadow:0 16px 40px rgba(0,0,0,.55);transform-origin:var(--ox,50%) var(--oy,0%);
+       transform:scale(.6);opacity:0;pointer-events:none;transition:transform .2s cubic-bezier(.3,1.6,.6,1),opacity .15s}
+  #pop.show{transform:scale(1);opacity:1;pointer-events:auto}
+  #pop .head{display:flex;align-items:center;justify-content:space-between;margin:0 2px 8px;font-weight:800;font-size:17px}
+  #pop .head button{width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer}
+  #pop .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .sw{position:relative;aspect-ratio:1;border-radius:50%;border:3px solid rgba(255,255,255,.9);box-shadow:0 3px 8px rgba(0,0,0,.4);cursor:pointer;padding:0;
+      transition:transform .12s}
+  .sw:active{transform:scale(.88)}
+  .sw.cur{box-shadow:0 0 0 3px var(--panel),0 0 0 6px #fff}
+  .sw.hint::after{content:"⭐";position:absolute;right:-7px;top:-9px;font-size:16px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));animation:twinkle 1.2s ease-in-out infinite}
+  @keyframes twinkle{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+  .sw.eraser{background:#fff;display:grid;place-items:center;font-size:18px}
+  #pop .note{margin:8px 2px 0;font-size:13px;color:var(--soft);text-align:center}
+  #pop .sizes{display:flex;justify-content:center;gap:10px;margin:10px 0 0}
+  #pop .sizes button{width:52px;height:44px;border-radius:14px;border:2px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);cursor:pointer;display:grid;place-items:center}
+  #pop .sizes button.on{border-color:var(--yellow);background:rgba(255,210,63,.18)}
+  #pop .sizes i{display:block;border-radius:50%;background:#fff}
+  #shade{position:fixed;inset:0;z-index:25;display:none}
+  #shade.show{display:block}
+
+  /* big reference */
+  #big{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:24px;background:rgba(5,7,26,.82);backdrop-filter:blur(4px);
+       opacity:0;pointer-events:none;transition:opacity .25s}
+  #big.show{opacity:1;pointer-events:auto}
+  #big .card{width:min(86vw,72vh,520px);display:flex;flex-direction:column;gap:12px;align-items:center}
+  #big .pv{width:100%;aspect-ratio:1;border-radius:26px;background:#fff;overflow:hidden;border:5px solid var(--yellow)}
+  #big .pv svg{display:block;width:100%;height:100%}
+  #big b{font-size:22px}
+  #big button{padding:10px 26px;border:0;border-radius:999px;font:800 18px var(--font);background:var(--yellow);color:#1b1b3a;cursor:pointer}
+
+  /* floating status, lower right */
+  #status{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:50;display:flex;align-items:center;gap:10px;
+          padding:10px 16px 10px 10px;border-radius:999px;background:rgba(20,24,70,.94);border:2px solid rgba(255,255,255,.15);
+          box-shadow:0 8px 24px rgba(0,0,0,.4);font-weight:700;font-size:15px;transform:translateY(160%);opacity:0;transition:.3s;pointer-events:none}
+  #status.show{transform:none;opacity:1}
+  #status .spin{width:26px;height:26px;border-radius:50%;border:4px solid rgba(255,255,255,.2);border-top-color:var(--green);animation:spin .8s linear infinite}
+  #status.done .spin{animation:none;border-color:var(--green);background:var(--green)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <a class="btn" href="../index.html" aria-label="Home">🏠</a>
+    <button class="btn" id="undoBtn" aria-label="Undo">↩️</button>
+    <div class="title">Color Planets</div>
+    <button class="btn" id="clearBtn" aria-label="Start over">🧽</button>
+    <button class="btn" id="saveBtn" aria-label="Save picture">💾</button>
+  </div>
+  <div class="pics" id="pics"></div>
+  <div class="board"><div class="paper" id="paper"><svg id="art" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"></svg>
+    <button id="chip" aria-label="Change color"><i id="chipDot"></i><span>Change color</span></button></div></div>
+  <div class="guide">
+    <button class="ref" id="refBtn" aria-label="See the colored picture"><svg id="refArt" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"></svg></button>
+    <div class="txt">
+      <b id="guideTitle">Copy this picture!</b>
+      <span id="guideTip">Tap a part, then pick a color.</span>
+      <div class="progress"><i id="bar"></i></div>
+    </div>
+  </div>
+</div>
+
+<div id="shade"></div>
+<div id="pop" role="dialog" aria-label="Pick a color">
+  <div class="head"><span>Pick a color</span><button id="popClose" aria-label="Close">✕</button></div>
+  <div class="grid" id="grid"></div>
+  <div class="sizes" id="sizes">
+    <button data-w="9" aria-label="Thin brush"><i style="width:8px;height:8px"></i></button>
+    <button data-w="18" class="on" aria-label="Medium brush"><i style="width:15px;height:15px"></i></button>
+    <button data-w="32" aria-label="Big brush"><i style="width:24px;height:24px"></i></button>
+  </div>
+  <p class="note">⭐ = the color in the picture</p>
+</div>
+
+<div id="big" role="dialog" aria-label="Colored picture">
+  <div class="card"><b id="bigTitle">Copy me!</b><div class="pv"><svg id="bigArt" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"></svg></div><button id="bigClose">Back to coloring</button></div>
+</div>
+
+<div id="status" role="status" aria-live="polite"><div class="spin"></div><span id="statusText">Saving…</span></div>
+
+<script>
+/* ================= shape helpers ================= */
+const circ=(cx,cy,r)=>`M${cx-r} ${cy}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0Z`;
+const ell=(cx,cy,rx,ry)=>`M${cx-rx} ${cy}a${rx} ${ry} 0 1 0 ${2*rx} 0a${rx} ${ry} 0 1 0 ${-2*rx} 0Z`;
+function star(cx,cy,r){let d='';for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.45:r;d+=(i?'L':'M')+(cx+rr*Math.cos(a)).toFixed(1)+' '+(cy+rr*Math.sin(a)).toFixed(1);}return d+'Z';}
+function wavePts(x0,x1,y,amp,ph){const p=[];for(let i=0;i<=28;i++){const x=x0+(x1-x0)*i/28;p.push([x,y+amp*Math.sin(x/28+ph)]);}return p;}
+const pts=a=>a.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L');
+/* wavy bands across a circle */
+function bands(cx,cy,r,cuts,amp){
+  const ys=[cy-r-30,...cuts,cy+r+30],x0=cx-r-30,x1=cx+r+30,edge=[];
+  for(let j=0;j<ys.length;j++){const a=(j===0||j===ys.length-1)?0:amp;edge.push(wavePts(x0,x1,ys[j],a,j*1.7));}
+  const regions=[];for(let i=0;i<ys.length-1;i++)regions.push('M'+pts(edge[i])+'L'+pts(edge[i+1].slice().reverse())+'Z');
+  return regions;
+}
+const sec=(k,d,extra='')=>`<path class="sec" data-k="${k}" d="${d}" ${extra}/>`;
+const ol=(d,extra='')=>`<path class="ol" d="${d}" ${extra}/>`;
+const cornerStars=()=>[[44,44,26],[356,46,22],[42,358,20],[358,356,26]].map((s,i)=>sec('star'+i,star(...s))).join('');
+const bg=()=>`<rect class="sec" data-k="bg" x="-4" y="-4" width="408" height="408" style="stroke:none"/>`;
+
+/* ================= colors ================= */
+const C={red:'#ff4d4d',orange:'#ff9f43',yellow:'#ffd23f',lime:'#a3e635',green:'#22c55e',teal:'#2ee6c5',sky:'#4dd6ff',blue:'#3b82f6',navy:'#1e3a8a',
+         lilac:'#a78bfa',purple:'#7c3aed',pink:'#ff6b9d',rose:'#ffc2d6',brown:'#a16207',tan:'#e0b98a',gray:'#9ca3af',black:'#1f2937',white:'#ffffff'};
+const COLORS=Object.values(C);
+
+/* ================= the pictures + their finished colors ================= */
+const alt=(list)=>k=>list[(+k.replace(/\D/g,'')||0)%list.length];
+const PICS=[
+ {id:'saturn',name:'Saturn',icon:'🪐',draw(){
+   const cx=200,cy=200,R=96,rot=`transform="rotate(-14 ${cx} ${cy})"`;
+   const ring=[[186,54,156,43],[156,43,124,33]];
+   const ringSec=(half)=>ring.map((r,i)=>sec('ring'+i,ell(cx,cy,r[0],r[1])+ell(cx,cy,r[2],r[3]),`fill-rule="evenodd" clip-path="url(#${half})"`)).join('');
+   const body=bands(cx,cy,R,[150,178,206,234],5).map((d,i)=>sec('band'+i,d,'clip-path="url(#sat)"')).join('');
+   return `<defs><clipPath id="sat"><path d="${circ(cx,cy,R)}"/></clipPath>
+     <clipPath id="back"><rect x="-200" y="-200" width="800" height="${cy+200}"/></clipPath>
+     <clipPath id="front"><rect x="-200" y="${cy}" width="800" height="400"/></clipPath></defs>
+     ${bg()}${cornerStars()}<g ${rot}>${ringSec('back')}</g>${body}${ol(circ(cx,cy,R))}<g ${rot}>${ringSec('front')}</g>`;},
+  ref:{ring:alt([C.tan,C.brown]),band:alt([C.tan,C.orange,C.yellow,C.orange,C.tan])}},
+ {id:'earth',name:'Earth',icon:'🌍',draw(){
+   const cx=200,cy=205,R=150,cl='clip-path="url(#ea)"';
+   const land=['M110 110C140 90 175 105 170 135C166 160 140 165 145 190C150 215 175 225 168 255C160 290 135 300 125 280C115 255 120 230 105 215C88 198 80 170 90 145C95 128 100 118 110 110Z',
+     'M215 118C245 103 285 110 290 138C294 163 270 170 268 190C266 215 290 230 280 262C270 295 245 312 232 290C220 268 225 240 210 222C195 205 190 180 200 160C205 145 205 128 215 118Z',
+     'M272 280C292 270 322 275 324 295C326 315 302 325 284 318C268 312 260 290 272 280Z'];
+   const caps=bands(cx,cy,R,[84,328],7);
+   const cloud=(x,y)=>`M${x} ${y}q10 -18 30 -10q12 -16 30 -4q18 -4 20 12q-6 14 -24 10q-16 12 -32 2q-20 6 -24 -10Z`;
+   return `<defs><clipPath id="ea"><path d="${circ(cx,cy,R)}"/></clipPath></defs>${bg()}${cornerStars()}
+     ${sec('ocean',circ(cx,cy,R))}${land.map((d,i)=>sec('land'+i,d,cl)).join('')}
+     ${sec('capN',caps[0],cl)}${sec('capS',caps[2],cl)}${sec('cloud0',cloud(62,180),cl)}${sec('cloud1',cloud(180,320),cl)}${sec('cloud2',cloud(250,110),cl)}${ol(circ(cx,cy,R))}`;},
+  ref:{ocean:()=>C.blue,land:alt([C.green,C.lime,C.green]),cap:()=>C.white,cloud:()=>C.white}},
+ {id:'jupiter',name:'Jupiter',icon:'🟠',draw(){
+   const cx=200,cy=205,R=150;
+   const b=bands(cx,cy,R,[100,132,164,196,228,260,294,326],7).map((d,i)=>sec('band'+i,d,'clip-path="url(#ju)"')).join('');
+   return `<defs><clipPath id="ju"><path d="${circ(cx,cy,R)}"/></clipPath></defs>${bg()}${cornerStars()}${b}
+     ${sec('spot0',ell(252,266,50,28))}${sec('spot1',ell(252,266,28,14))}${ol(circ(cx,cy,R))}`;},
+  ref:{band:alt([C.tan,C.orange,C.white,C.brown,C.tan,C.orange,C.white,C.brown,C.tan]),spot:alt([C.orange,C.red])}},
+ {id:'sun',name:'Sun',icon:'☀️',draw(){
+   const cx=200,cy=200;let rays='';
+   for(let i=0;i<12;i++){const a=i*Math.PI/6,R=i%2?150:174,w=.2,p=(r,t)=>(cx+r*Math.cos(t)).toFixed(1)+' '+(cy+r*Math.sin(t)).toFixed(1);
+     rays+=sec('ray'+i,`M${p(104,a-w)}L${p(R,a)}L${p(104,a+w)}Z`);}
+   return `${bg()}${cornerStars()}${rays}${sec('glow',circ(cx,cy,112)+circ(cx,cy,96),'fill-rule="evenodd"')}${sec('face',circ(cx,cy,96))}
+     ${sec('cheek0',ell(150,222,16,10))}${sec('cheek1',ell(250,222,16,10))}
+     <ellipse class="ink" cx="165" cy="182" rx="11" ry="15"/><ellipse class="ink" cx="235" cy="182" rx="11" ry="15"/>
+     <circle cx="169" cy="176" r="4" fill="#fff" pointer-events="none"/><circle cx="239" cy="176" r="4" fill="#fff" pointer-events="none"/>
+     ${ol('M168 228Q200 258 232 228')}`;},
+  ref:{ray:alt([C.orange,C.yellow]),glow:()=>C.orange,face:()=>C.yellow,cheek:()=>C.pink}},
+ {id:'mars',name:'Mars',icon:'🔴',draw(){
+   const cx=200,cy=205,R=150,cl='clip-path="url(#ma)"';const caps=bands(cx,cy,R,[86],6);
+   const patches=['M90 170C110 150 150 160 160 180C170 205 140 215 120 210C100 205 80 190 90 170Z','M220 220C250 205 300 215 310 240C318 262 290 270 260 262C235 255 205 240 220 220Z'];
+   const craters=[[140,262,28],[262,160,22],[300,300,20],[110,300,14]];
+   return `<defs><clipPath id="ma"><path d="${circ(cx,cy,R)}"/></clipPath></defs>${bg()}${cornerStars()}
+     ${sec('ground',circ(cx,cy,R))}${sec('cap',caps[0],cl)}${patches.map((d,i)=>sec('patch'+i,d,cl)).join('')}
+     ${sec('volcano0',circ(175,128,34))}${sec('volcano1',circ(175,128,15))}
+     ${craters.map((c,i)=>sec('crater'+i,circ(...c))+sec('craterIn'+i,circ(c[0],c[1],c[2]*.5))).join('')}${ol(circ(cx,cy,R))}`;},
+  ref:{ground:()=>C.red,cap:()=>C.white,patch:()=>C.brown,volcano:alt([C.brown,C.orange]),craterIn:()=>C.orange,crater:()=>C.brown}},
+ {id:'moon',name:'Moon',icon:'🌕',draw(){
+   const cx=200,cy=205,R=150,cl='clip-path="url(#mo)"';
+   const maria=['M100 140C130 110 180 120 185 150C190 180 150 190 125 185C100 180 85 160 100 140Z','M210 240C240 220 290 235 292 262C294 290 255 300 232 290C210 280 195 258 210 240Z'];
+   const craters=[[245,130,30],[140,270,26],[300,200,18],[180,330,16],[90,220,14],[220,190,12]];
+   return `<defs><clipPath id="mo"><path d="${circ(cx,cy,R)}"/></clipPath></defs>${bg()}${cornerStars()}
+     ${sec('rock',circ(cx,cy,R))}${maria.map((d,i)=>sec('mare'+i,d,cl)).join('')}
+     ${craters.map((c,i)=>sec('crater'+i,circ(...c))+sec('craterIn'+i,circ(c[0]+c[2]*.12,c[1]+c[2]*.12,c[2]*.55))).join('')}${ol(circ(cx,cy,R))}`;},
+  ref:{rock:()=>C.gray,mare:()=>C.black,craterIn:()=>C.gray,crater:()=>C.white}},
+ {id:'neptune',name:'Neptune',icon:'🔵',draw(){
+   const cx=200,cy=205,R=150;
+   const b=bands(cx,cy,R,[120,170,220,270,315],9).map((d,i)=>sec('band'+i,d,'clip-path="url(#ne)"')).join('');
+   return `<defs><clipPath id="ne"><path d="${circ(cx,cy,R)}"/></clipPath></defs>${bg()}${cornerStars()}${b}
+     ${sec('spot',ell(150,240,36,20))}${sec('cloud0','M230 150q20 -10 40 0q20 -4 26 8q-18 8 -40 4q-16 4 -26 -12Z')}${ol(circ(cx,cy,R))}`;},
+  ref:{band:alt([C.sky,C.blue,C.sky,C.blue,C.navy,C.blue]),spot:()=>C.navy,cloud:()=>C.white}}
+];
+/* every picture: dark sky and yellow stars */
+const SHARED={bg:()=>C.navy,star:()=>C.yellow};
+function refColor(p,k){
+  const rules={...SHARED,...p.ref};
+  // longest matching name wins (so craterIn beats crater)
+  const name=Object.keys(rules).filter(r=>k.startsWith(r)).sort((a,b)=>b.length-a.length)[0];
+  return name?rules[name](k):C.white;
+}
+
+/* ================= cache (saved on this device) ================= */
+const store={get(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(_){return null;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(_){}}};
+const markupCache=new Map(),refCache=new Map();
+function markup(p){if(!markupCache.has(p.id))markupCache.set(p.id,p.draw());return markupCache.get(p.id);}
+/* reference copy: same drawing, its own ids, filled with the finished colors */
+function refMarkup(p,tag){const key=p.id+tag;if(refCache.has(key))return refCache.get(key);
+  const m=markup(p).replace(/id="/g,`id="${tag}-`).replace(/url\(#/g,`url(#${tag}-`)
+    .replace(/<path class="sec" data-k="([^"]+)"/g,(_,k)=>`<path class="sec" data-k="${k}" fill="${refColor(p,k)}" pointer-events="none"`)
+    .replace(/<rect class="sec" data-k="([^"]+)"/g,(_,k)=>`<rect class="sec" data-k="${k}" fill="${refColor(p,k)}" pointer-events="none"`);
+  refCache.set(key,m);return m;}
+
+/* ================= state =================
+   strokes: [{k: part, c: color, w: brush width, p:[x,y,x,y,...]}] in the order they were drawn */
+const art=document.getElementById('art'),refArt=document.getElementById('refArt'),bigArt=document.getElementById('bigArt'),paper=document.getElementById('paper');
+const NS='http://www.w3.org/2000/svg';
+let cur=PICS[0],strokes=[],keys=[],sel=null,brush={c:null,w:18},parts={};
+const undoBtn=document.getElementById('undoBtn');
+
+/* each part gets: its white shape, a paint layer clipped to that shape, and its outline on top */
+function buildLayers(){
+  parts={};const defs=document.createElementNS(NS,'defs');art.insertBefore(defs,art.firstChild);let n=0;
+  art.querySelectorAll('.sec').forEach(el=>{
+    const k=el.dataset.k,id='cp'+(n++),cp=document.createElementNS(NS,'clipPath');cp.setAttribute('id',id);
+    const shape=el.cloneNode();shape.removeAttribute('class');shape.removeAttribute('data-k');shape.removeAttribute('style');
+    if(shape.getAttribute('fill-rule')){shape.setAttribute('clip-rule',shape.getAttribute('fill-rule'));shape.removeAttribute('fill-rule');}
+    cp.appendChild(shape);defs.appendChild(cp);
+    const g=document.createElementNS(NS,'g');g.setAttribute('class','paint');g.setAttribute('clip-path',`url(#${id})`);
+    el.after(g);
+    if(el.tagName!=='rect'){const e=el.cloneNode();e.setAttribute('class','edge');e.removeAttribute('data-k');e.removeAttribute('fill');g.after(e);}
+    (parts[k]=parts[k]||[]).push({el,g});
+  });
+  keys=Object.keys(parts);
+}
+function smoothD(p){
+  if(p.length<4)return `M${p[0]} ${p[1]}l.01 0`;
+  let d=`M${p[0]} ${p[1]}`;for(let i=2;i<p.length-2;i+=2){const mx=(p[i]+p[i+2])/2,my=(p[i+1]+p[i+3])/2;d+=`Q${p[i]} ${p[i+1]} ${mx.toFixed(1)} ${my.toFixed(1)}`;}
+  return d+`L${p[p.length-2]} ${p[p.length-1]}`;
+}
+function drawStroke(st){const out=[];for(const part of parts[st.k]||[]){const path=document.createElementNS(NS,'path');path.setAttribute('d',smoothD(st.p));
+  path.setAttribute('stroke',st.c);path.setAttribute('stroke-width',st.w);part.g.appendChild(path);out.push(path);}st.els=out;}
+function renderAll(){Object.values(parts).flat().forEach(p=>p.g.textContent='');strokes.forEach(drawStroke);}
+function load(p){
+  closePop();endBrush();cur=p;art.innerHTML=markup(p);refArt.innerHTML=refMarkup(p,'r');bigArt.innerHTML=refMarkup(p,'b');
+  art.querySelectorAll('.sec').forEach(el=>el.setAttribute('fill','#ffffff'));buildLayers();
+  strokes=(store.get('sk-color2-'+p.id)||[]).filter(st=>parts[st.k]);renderAll();undoBtn.disabled=!strokes.length;covCache={};
+  document.querySelectorAll('.pic').forEach(b=>b.classList.toggle('on',b.dataset.id===p.id));store.set('sk-color-last',p.id);
+  document.getElementById('bigTitle').textContent='Copy my '+p.name+'!';
+  requestAnimationFrame(()=>{keys.forEach(k=>coverage(k));progress(false);});
+}
+let saveTimer;function persist(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>store.set('sk-color2-'+cur.id,strokes.map(({k,c,w,p})=>({k,c,w,p}))),400);}
+
+/* ================= how much of each part is colored like the picture =================
+   Each part is drawn small on a hidden canvas with its strokes; a part "matches" when
+   most of it shows the picture's color. Results are cached per part. */
+const CV=document.createElement('canvas'),CN=110;CV.width=CV.height=CN;const cx2=CV.getContext('2d',{willReadFrequently:true});
+let covCache={};
+function partMatrix(el){const m=art.getScreenCTM().inverse().multiply(el.getScreenCTM());return m;}
+function shapePath(el){
+  if(el.tagName==='rect'){const p=new Path2D();p.rect(+el.getAttribute('x'),+el.getAttribute('y'),+el.getAttribute('width'),+el.getAttribute('height'));return p;}
+  return new Path2D(el.getAttribute('d'));}
+function clipFor(el){const c=el.getAttribute('clip-path');if(!c)return null;const id=c.match(/#([^)]+)/)[1],cp=art.querySelector('#'+CSS.escape(id));
+  return cp&&cp.firstElementChild?shapePath(cp.firstElementChild):null;}
+function coverage(k){
+  const want=refColor(cur,k),sc=CN/400;let inside=0,good=0;
+  const hex=want.replace('#',''),wr=parseInt(hex.slice(0,2),16),wg=parseInt(hex.slice(2,4),16),wb=parseInt(hex.slice(4,6),16);
+  for(const part of parts[k]){
+    const m=partMatrix(part.el);
+    cx2.setTransform(1,0,0,1,0,0);cx2.clearRect(0,0,CN,CN);
+    cx2.setTransform(sc*m.a,sc*m.b,sc*m.c,sc*m.d,sc*m.e,sc*m.f);
+    const clip=clipFor(part.el);if(clip)cx2.clip(clip);
+    const shape=shapePath(part.el),rule=part.el.getAttribute('fill-rule')==='evenodd'?'evenodd':'nonzero';
+    cx2.clip(shape,rule);cx2.fillStyle='#ffffff';cx2.fillRect(-50,-50,500,500);
+    cx2.lineCap='round';cx2.lineJoin='round';
+    for(const st of strokes)if(st.k===k){cx2.strokeStyle=st.c;cx2.lineWidth=st.w;cx2.stroke(new Path2D(smoothD(st.p)));}
+    const d=cx2.getImageData(0,0,CN,CN).data;
+    for(let i=0;i<d.length;i+=4){if(d[i+3]<200)continue;inside++;
+      if(Math.abs(d[i]-wr)<40&&Math.abs(d[i+1]-wg)<40&&Math.abs(d[i+2]-wb)<40)good++;}
+    CV.width=CN; // clears the clip for the next part
+  }
+  covCache[k]=inside?good/inside:1;return covCache[k];
+}
+const MATCH=.6;
+function progress(celebrate){
+  const ok=keys.filter(k=>(covCache[k]??0)>=MATCH).length,pct=keys.length?ok/keys.length:0;
+  document.getElementById('bar').style.width=(pct*100).toFixed(0)+'%';
+  const t=document.getElementById('guideTitle'),tip=document.getElementById('guideTip');
+  if(pct===1){t.textContent='🎉 Just like the picture!';tip.textContent='You did it! Try another planet.';if(celebrate)fanfare();}
+  else if(brush.c&&sel){t.textContent='Color it in! 🖍️';tip.textContent='Rub your finger on the part you tapped.';}
+  else{t.textContent='Copy this picture!';tip.textContent=ok?`${ok} of ${keys.length} parts done. Keep going!`:'Tap a part, then pick a color.';}
+}
+
+const picsEl=document.getElementById('pics');
+picsEl.innerHTML=PICS.map(p=>`<button class="pic" data-id="${p.id}"><b>${p.icon}</b>${p.name}</button>`).join('');
+picsEl.addEventListener('click',e=>{const b=e.target.closest('.pic');if(b){load(PICS.find(p=>p.id===b.dataset.id));blip(500);}});
+
+/* ================= step 1: tap a part -> color pop-up ================= */
+const pop=document.getElementById('pop'),shade=document.getElementById('shade'),grid=document.getElementById('grid'),chip=document.getElementById('chip');
+grid.innerHTML=COLORS.map(c=>`<button class="sw${c==='#ffffff'?' eraser':''}" data-c="${c}" style="background:${c}" aria-label="${c==='#ffffff'?'White':'Color '+c}"></button>`).join('');
+function markSelected(k){} // no outline on the chosen part
+function openPop(x,y){
+  const want=refColor(cur,sel.k);
+  grid.querySelectorAll('.sw').forEach(b=>{b.classList.toggle('cur',b.dataset.c===brush.c);b.classList.toggle('hint',b.dataset.c===want);});
+  pop.style.left='0px';pop.style.top='0px';pop.classList.add('show');shade.classList.add('show');
+  const w=pop.offsetWidth,h=pop.offsetHeight,m=12,vw=innerWidth,vh=innerHeight;
+  let left=Math.min(Math.max(m,x-w/2),vw-w-m),top=y+24;
+  if(top+h>vh-m)top=y-h-24;if(top<m)top=Math.max(m,(vh-h)/2);
+  pop.style.left=left+'px';pop.style.top=top+'px';pop.style.setProperty('--ox',(x-left)+'px');pop.style.setProperty('--oy',(y<top?0:h)+'px');
+}
+function closePop(){pop.classList.remove('show');shade.classList.remove('show');}
+function cancelPop(){closePop();if(!brush.c)endBrush();}
+shade.addEventListener('click',cancelPop);document.getElementById('popClose').onclick=cancelPop;
+addEventListener('keydown',e=>{if(e.key==='Escape'){cancelPop();big.classList.remove('show');}});
+function endBrush(){sel=null;brush.c=null;markSelected(null);paper.classList.remove('brush');chip.classList.remove('show');}
+
+/* ================= step 2: pick a color (and brush size) ================= */
+grid.addEventListener('click',e=>{const b=e.target.closest('.sw');if(!b||!sel)return;
+  brush.c=b.dataset.c;closePop();paper.classList.add('brush');chip.classList.add('show');document.getElementById('chipDot').style.background=brush.c;
+  blip(520+COLORS.indexOf(brush.c)*25);progress(false);});
+document.getElementById('sizes').addEventListener('click',e=>{const b=e.target.closest('[data-w]');if(!b)return;brush.w=+b.dataset.w;
+  document.querySelectorAll('#sizes button').forEach(x=>x.classList.toggle('on',x===b));blip(400+brush.w*10);});
+chip.addEventListener('click',()=>{if(!sel)return;const r=chip.getBoundingClientRect();openPop(r.left+r.width/2,r.bottom);});
+
+/* ================= step 3: color it in with your finger =================
+   A stroke only shows inside the chosen part. Tapping (without rubbing) another part
+   picks that part instead. */
+let down=null,live=null;
+function toLocal(e,el){const pt=art.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(el.getScreenCTM().inverse());}
+art.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.sec');if(!el)return;e.preventDefault();
+  down={x:e.clientX,y:e.clientY,k:el.dataset.k,id:e.pointerId,moved:false};
+  if(brush.c&&sel){ // start coloring the chosen part, wherever the finger lands
+    const base=parts[sel.k][0].el,q=toLocal(e,base);
+    live={k:sel.k,c:brush.c,w:brush.w,p:[+q.x.toFixed(1),+q.y.toFixed(1)],base,last:[e.clientX,e.clientY]};drawStroke(live);
+    try{art.setPointerCapture(e.pointerId);}catch(_){}
+  }
+});
+art.addEventListener('pointermove',e=>{
+  if(!down||e.pointerId!==down.id)return;
+  if(Math.hypot(e.clientX-down.x,e.clientY-down.y)>7)down.moved=true;
+  if(!live)return;const coalesced=e.getCoalescedEvents?e.getCoalescedEvents():[e];
+  for(const ev of coalesced){if(Math.hypot(ev.clientX-live.last[0],ev.clientY-live.last[1])<2)continue;live.last=[ev.clientX,ev.clientY];
+    const q=toLocal(ev,live.base);live.p.push(+q.x.toFixed(1),+q.y.toFixed(1));}
+  const d=smoothD(live.p);live.els.forEach(pe=>pe.setAttribute('d',d));scratch();
+});
+function up(e){
+  if(!down||e.pointerId!==down.id)return;const d=down;down=null;
+  if(live){const st=live;live=null;
+    if(!d.moved&&d.k!==sel.k){st.els.forEach(x=>x.remove());pickPart(d.k,e);return;} // a tap on another part: choose it
+    delete st.base;delete st.last;strokes.push(st);if(strokes.length>600)strokes.splice(0,1);undoBtn.disabled=false;persist();
+    coverage(st.k);progress(true);return;}
+  if(!d.moved)pickPart(d.k,e);
+}
+art.addEventListener('pointerup',up);art.addEventListener('pointercancel',up);
+function pickPart(k,e){sel={k};markSelected(k);brush.c=null;chip.classList.remove('show');paper.classList.remove('brush');openPop(e.clientX,e.clientY);blip(620);}
+
+undoBtn.onclick=()=>{const st=strokes.pop();if(!st)return;(st.els||[]).forEach(x=>x.remove());persist();undoBtn.disabled=!strokes.length;coverage(st.k);progress(false);blip(330);};
+
+/* start over: tap twice to confirm */
+const clearBtn=document.getElementById('clearBtn');let clearArmed=0;
+clearBtn.onclick=()=>{if(!strokes.length)return;const now=Date.now();
+  if(now-clearArmed>2500){clearArmed=now;status('Tap 🧽 again to start over',true);return;}
+  clearArmed=0;strokes=[];renderAll();undoBtn.disabled=true;persist();covCache={};keys.forEach(k=>coverage(k));endBrush();progress(false);status('Fresh page ✓',true);};
+
+/* soft crayon scratch sound while coloring */
+let scratchT=0;function scratch(){const n=performance.now();if(n-scratchT<70)return;scratchT=n;
+  try{const A=ctx(),t=A.currentTime,len=Math.floor(A.sampleRate*.06),b=A.createBuffer(1,len,A.sampleRate),d=b.getChannelData(0);
+    for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);const s=A.createBufferSource(),f=A.createBiquadFilter(),g=A.createGain();
+    s.buffer=b;f.type='bandpass';f.frequency.value=2600+Math.random()*900;f.Q.value=1.2;g.gain.value=.05;s.connect(f);f.connect(g);g.connect(A.destination);s.start(t);}catch(_){}}
+
+/* ================= reference picture ================= */
+const big=document.getElementById('big');
+document.getElementById('refBtn').onclick=()=>{closePop();big.classList.add('show');blip(700);};
+document.getElementById('bigClose').onclick=()=>big.classList.remove('show');
+big.addEventListener('click',e=>{if(e.target===big)big.classList.remove('show');});
+
+/* ================= save picture (in the background) ================= */
+const statusEl=document.getElementById('status'),statusText=document.getElementById('statusText');let stTimer;
+function status(t,done){clearTimeout(stTimer);statusText.textContent=t;statusEl.classList.toggle('done',!!done);statusEl.classList.add('show');
+  if(done)stTimer=setTimeout(()=>statusEl.classList.remove('show'),2200);}
+document.getElementById('saveBtn').onclick=async()=>{
+  closePop();status('Saving picture…');
+  try{
+    const clone=art.cloneNode(true);clone.querySelectorAll('.ripple,.sel-ring').forEach(n=>n.remove());clone.setAttribute('width','1200');clone.setAttribute('height','1200');
+    const css='.sec{stroke:#23214a;stroke-width:4;stroke-linejoin:round}.ol{fill:none;stroke:#23214a;stroke-width:5;stroke-linejoin:round}.ink{fill:#23214a}.edge{fill:none;stroke:#23214a;stroke-width:4;stroke-linejoin:round}.paint path{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:.93}';
+    const st=document.createElementNS('http://www.w3.org/2000/svg','style');st.textContent=css;clone.insertBefore(st,clone.firstChild);
+    const url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)],{type:'image/svg+xml'}));
+    const img=new Image();await new Promise((ok,bad)=>{img.onload=ok;img.onerror=bad;img.src=url;});
+    const cv=document.createElement('canvas');cv.width=cv.height=1200;const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,1200,1200);cx.drawImage(img,0,0,1200,1200);
+    URL.revokeObjectURL(url);const blob=await new Promise(r=>cv.toBlob(r,'image/png'));const name='my-'+cur.id+'.png';
+    const file=new File([blob],name,{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})&&/android|iphone|ipad/i.test(navigator.userAgent)){
+      try{await navigator.share({files:[file],title:'My '+cur.name});status('Saved! ✓',true);return;}catch(e){if(e.name==='AbortError'){status('Not saved',true);return;}}}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);status('Saved! ✓',true);
+  }catch(e){status('Could not save',true);}
+};
+
+/* ================= tiny sounds ================= */
+let AC=null;
+function ctx(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC;}
+function blip(f){try{const A=ctx(),t=A.currentTime,o=A.createOscillator(),g=A.createGain();o.type='sine';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.6,t+.08);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.18,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+.22);o.connect(g);g.connect(A.destination);o.start(t);o.stop(t+.25);}catch(_){}}
+let lastFanfare='';
+function fanfare(){if(lastFanfare===cur.id)return;lastFanfare=cur.id;
+  try{const A=ctx(),t=A.currentTime;[[523,0],[659,.15],[784,.3],[1047,.45]].forEach(([f,d])=>{const o=A.createOscillator(),g=A.createGain();o.type='triangle';o.frequency.value=f;
+    g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.2,t+d+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d+.45);o.connect(g);g.connect(A.destination);o.start(t+d);o.stop(t+d+.5);});}catch(_){}}
+
+load(PICS.find(p=>p.id===store.get('sk-color-last'))||PICS[0]);
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('../sw.js',{scope:'../'}).catch(()=>{}));
+</script>
+</body>
+</html>
